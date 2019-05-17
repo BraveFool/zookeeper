@@ -26,6 +26,8 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.OpCode;
 import org.apache.zookeeper.common.Time;
 import org.apache.zookeeper.data.Id;
+import org.apache.zookeeper.metrics.Summary;
+import org.apache.zookeeper.metrics.SummarySet;
 import org.apache.zookeeper.server.quorum.flexible.QuorumVerifier;
 import org.apache.zookeeper.txn.TxnHeader;
 
@@ -77,6 +79,14 @@ public class Request {
     public final List<Id> authInfo;
 
     public final long createTime = Time.currentElapsedTime();
+
+    public long prepQueueStartTime= -1;
+
+    public long prepStartTime = -1;
+
+    public long commitProcQueueStartTime = -1;
+
+    public long commitRecvTime = -1;
 
     private Object owner;
 
@@ -145,8 +155,10 @@ public class Request {
         case OpCode.exists:
         case OpCode.getACL:
         case OpCode.getChildren:
+        case OpCode.getAllChildrenNumber:
         case OpCode.getChildren2:
         case OpCode.getData:
+        case OpCode.getEphemerals:
         case OpCode.multi:
         case OpCode.ping:
         case OpCode.reconfig:
@@ -167,8 +179,10 @@ public class Request {
         case OpCode.exists:
         case OpCode.getACL:
         case OpCode.getChildren:
+        case OpCode.getAllChildrenNumber:
         case OpCode.getChildren2:
         case OpCode.getData:
+        case OpCode.getEphemerals:
             return false;
         case OpCode.create:
         case OpCode.create2:
@@ -227,8 +241,12 @@ public class Request {
             return "setACL";
         case OpCode.getChildren:
             return "getChildren";
+        case OpCode.getAllChildrenNumber:
+            return "getAllChildrenNumber";
         case OpCode.getChildren2:
             return "getChildren2";
+        case OpCode.getEphemerals:
+            return "getEphemerals";
         case OpCode.ping:
             return "ping";
         case OpCode.createSession:
@@ -296,5 +314,39 @@ public class Request {
 
     public KeeperException getException() {
         return e;
+    }
+
+    public void logLatency(Summary metric) {
+        logLatency(metric, Time.currentWallTime());
+    }
+
+    public void logLatency(Summary metric, long currentTime){
+        if (hdr != null) {
+            /* Request header is created by leader. If there is clock drift
+             * latency might be negative. Headers use wall time, not
+             * CLOCK_MONOTONIC.
+             */
+            long latency = currentTime - hdr.getTime();
+            if (latency > 0) {
+                metric.add(latency);
+            }
+        }
+    }
+
+    public void logLatency(SummarySet metric, String key, long currentTime) {
+        if (hdr != null) {
+            /* Request header is created by leader. If there is clock drift
+             * latency might be negative. Headers use wall time, not
+             * CLOCK_MONOTONIC.
+             */
+            long latency = currentTime - hdr.getTime();
+            if (latency > 0) {
+                metric.add(key, latency);
+            }
+        }
+    }
+
+    public void logLatency(SummarySet metric, String key) {
+        logLatency(metric, key, Time.currentWallTime());
     }
 }

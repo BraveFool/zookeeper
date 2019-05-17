@@ -24,7 +24,7 @@ import java.util.Arrays;
 import java.util.Properties;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.metrics.impl.NullMetricsProvider;
+import org.apache.zookeeper.metrics.impl.DefaultMetricsProvider;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 
@@ -50,8 +50,20 @@ public class ServerConfig {
     protected int minSessionTimeout = -1;
     /** defaults to -1 if not set explicitly */
     protected int maxSessionTimeout = -1;
-    protected String metricsProviderClassName = NullMetricsProvider.class.getName();
+    protected String metricsProviderClassName = DefaultMetricsProvider.class.getName();
     protected Properties metricsProviderConfiguration = new Properties();
+    /** defaults to -1 if not set explicitly */
+    protected int listenBacklog = -1;
+    protected String initialConfig;
+
+    /** JVM Pause Monitor feature switch */
+    protected boolean jvmPauseMonitorToRun = false;
+    /** JVM Pause Monitor warn threshold in ms */
+    protected long jvmPauseWarnThresholdMs;
+    /** JVM Pause Monitor info threshold in ms */
+    protected long jvmPauseInfoThresholdMs;
+    /** JVM Pause Monitor sleep time in ms */
+    protected long jvmPauseSleepTimeMs;
 
     /**
      * Parse arguments for server configuration
@@ -103,8 +115,14 @@ public class ServerConfig {
         maxClientCnxns = config.getMaxClientCnxns();
         minSessionTimeout = config.getMinSessionTimeout();
         maxSessionTimeout = config.getMaxSessionTimeout();
+        jvmPauseMonitorToRun = config.isJvmPauseMonitorToRun();
+        jvmPauseInfoThresholdMs = config.getJvmPauseInfoThresholdMs();
+        jvmPauseWarnThresholdMs = config.getJvmPauseWarnThresholdMs();
+        jvmPauseSleepTimeMs = config.getJvmPauseSleepTimeMs();
         metricsProviderClassName = config.getMetricsProviderClassName();
         metricsProviderConfiguration = config.getMetricsProviderConfiguration();
+        listenBacklog = config.getClientPortListenBacklog();
+        initialConfig = config.getInitialConfig();
     }
 
     public InetSocketAddress getClientPortAddress() {
@@ -121,7 +139,21 @@ public class ServerConfig {
     public int getMinSessionTimeout() { return minSessionTimeout; }
     /** maximum session timeout in milliseconds, -1 if unset */
     public int getMaxSessionTimeout() { return maxSessionTimeout; }
+
+    public long getJvmPauseInfoThresholdMs() {
+        return jvmPauseInfoThresholdMs;
+    }
+    public long getJvmPauseWarnThresholdMs() {
+        return jvmPauseWarnThresholdMs;
+    }
+    public long getJvmPauseSleepTimeMs() {
+        return jvmPauseSleepTimeMs;
+    }
+    public boolean isJvmPauseMonitorToRun() {
+        return jvmPauseMonitorToRun;
+    }
     public String getMetricsProviderClassName() { return metricsProviderClassName; }
     public Properties getMetricsProviderConfiguration() { return metricsProviderConfiguration; }
-
+    /** Maximum number of pending socket connections to read, -1 if unset */
+    public int getClientPortListenBacklog() { return listenBacklog; }
 }

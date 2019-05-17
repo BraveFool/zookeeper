@@ -70,7 +70,7 @@ public class Follower extends Learner{
         self.end_fle = Time.currentElapsedTime();
         long electionTimeTaken = self.end_fle - self.start_fle;
         self.setElectionTimeTaken(electionTimeTaken);
-        ServerMetrics.ELECTION_TIME.add(electionTimeTaken);
+        ServerMetrics.getMetrics().ELECTION_TIME.add(electionTimeTaken);
         LOG.info("FOLLOWING - LEADER ELECTION TOOK - {} {}", electionTimeTaken,
                 QuorumPeer.FLE_TIME_UNIT);
         self.start_fle = 0;
@@ -96,7 +96,7 @@ public class Follower extends Learner{
                     syncWithLeader(newEpochZxid);
                 } finally {
                     long syncTime = Time.currentElapsedTime() - startTime;
-                    ServerMetrics.FOLLOWER_SYNC_TIME.add(syncTime);
+                    ServerMetrics.getMetrics().FOLLOWER_SYNC_TIME.add(syncTime);
                 }
                 if (self.getObserverMasterPort() > 0) {
                     LOG.info("Starting ObserverMaster");
@@ -141,7 +141,8 @@ public class Follower extends Learner{
         case Leader.PING:            
             ping(qp);            
             break;
-        case Leader.PROPOSAL:           
+        case Leader.PROPOSAL:
+            ServerMetrics.getMetrics().LEARNER_PROPOSAL_RECEIVED_COUNT.add(1);
             TxnHeader hdr = new TxnHeader();
             Record txn = SerializeUtils.deserializeTxn(qp.getData(), hdr);
             if (hdr.getZxid() != lastQueued + 1) {
@@ -159,12 +160,24 @@ public class Follower extends Learner{
             }
             
             fzk.logRequest(hdr, txn);
-
+            if (hdr != null) {
+                /*
+                 * Request header is created only by the leader, so this is only set
+                 * for quorum packets. If there is a clock drift, the latency may be
+                 * negative. Headers use wall time, not CLOCK_MONOTONIC.
+                 */
+                long now = Time.currentWallTime();
+                long latency = now - hdr.getTime();
+                if (latency > 0) {
+                    ServerMetrics.getMetrics().PROPOSAL_LATENCY.add(latency);
+                }
+            }
             if (om != null) {
                 om.proposalReceived(qp);
             }
             break;
         case Leader.COMMIT:
+            ServerMetrics.getMetrics().LEARNER_COMMIT_RECEIVED_COUNT.add(1);
             fzk.commit(qp.getZxid());
             if (om != null) {
                 om.proposalCommitted(qp.getZxid());

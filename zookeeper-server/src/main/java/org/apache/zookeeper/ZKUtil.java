@@ -17,11 +17,12 @@
  */
 package org.apache.zookeeper;
 
+import java.io.File;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import org.apache.zookeeper.AsyncCallback.StringCallback;
 import org.apache.zookeeper.AsyncCallback.VoidCallback;
@@ -88,6 +89,24 @@ public class ZKUtil {
             zk.delete(tree.get(i), -1, cb, ctx); //Delete all versions of the node with -1.
         }
     }
+    
+    /**
+     * @param filePath the file path to be validated
+     * @return Returns null if valid otherwise error message
+     */
+    public static String validateFileInput(String filePath) {
+        File file = new File(filePath);
+        if (!file.exists()) {
+            return "File '" + file.getAbsolutePath() + "' does not exist.";
+        }
+        if (!file.canRead()) {
+            return "Read permission is denied on the file '" + file.getAbsolutePath() + "'";
+        }
+        if (file.isDirectory()) {
+            return "'" + file.getAbsolutePath() + "' is a direcory. it must be a file.";
+        }
+        return null;
+    }
 
     /**
      * BFS Traversal of the system under pathRoot, with the entries in the list, in the
@@ -105,15 +124,12 @@ public class ZKUtil {
      */
     public static List<String> listSubTreeBFS(ZooKeeper zk, final String pathRoot) throws
         KeeperException, InterruptedException {
-        Deque<String> queue = new LinkedList<String>();
+        Queue<String> queue = new ArrayDeque<>();
         List<String> tree = new ArrayList<String>();
         queue.add(pathRoot);
         tree.add(pathRoot);
-        while (true) {
-            String node = queue.pollFirst();
-            if (node == null) {
-                break;
-            }
+        while (!queue.isEmpty()) {
+            String node = queue.poll();
             List<String> children = zk.getChildren(node, false);
             for (final String child : children) {
                 final String childPath = node + "/" + child;

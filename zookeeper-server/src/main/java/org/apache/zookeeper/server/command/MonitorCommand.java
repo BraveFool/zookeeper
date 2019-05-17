@@ -22,6 +22,7 @@ import java.io.PrintWriter;
 
 import org.apache.zookeeper.Version;
 import org.apache.zookeeper.server.ServerCnxn;
+import org.apache.zookeeper.server.ServerMetrics;
 import org.apache.zookeeper.server.ServerStats;
 import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.quorum.Leader;
@@ -73,15 +74,36 @@ public class MonitorCommand extends AbstractFourLetterCommand {
 
             print("learners", leader.getLearners().size());
             print("synced_followers", leader.getForwardingFollowers().size());
+            print("synced_non_voting_followers", leader.getNonVotingFollowers().size());
             print("pending_syncs", leader.getNumPendingSyncs());
 
             print("last_proposal_size", leader.getProposalStats().getLastBufferSize());
             print("max_proposal_size", leader.getProposalStats().getMaxBufferSize());
             print("min_proposal_size", leader.getProposalStats().getMinBufferSize());
         }
+
+        ServerMetrics.getMetrics()
+                    .getMetricsProvider()
+                    .dump(
+                    (metric, value) -> {
+                        if (value == null) {
+                            print(metric, null);
+                        } else if (value instanceof Long
+                                || value instanceof Integer) {
+                            print(metric, ((Number) value).longValue());
+                        } else if (value instanceof Number) {
+                            print(metric, ((Number) value).doubleValue());                        
+                        } else {
+                            print(metric, value.toString());
+                        }
+                    });
     }
 
     private void print(String key, long number) {
+        print(key, "" + number);
+    }
+    
+    private void print(String key, double number) {
         print(key, "" + number);
     }
 

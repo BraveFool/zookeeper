@@ -30,7 +30,7 @@ ask the [mailing list](http://zookeeper.apache.org/mailing_lists.html) or browse
 archives.
 
 + **ZooKeeper Overview**
-    Technical Overview Documents for Client Developers, Adminstrators, and Contributors
+    Technical Overview Documents for Client Developers, Administrators, and Contributors
     + [Overview](zookeeperOver.html) - a bird's eye view of ZooKeeper, including design concepts and architecture
     + [Getting Started](zookeeperStarted.html) - a tutorial-style guide for developers to install, run, and program to ZooKeeper
     + [Release Notes](releasenotes.html) - new developer and user facing features, improvements, and incompatibilities
@@ -38,7 +38,7 @@ archives.
     Documents for Developers using the ZooKeeper Client API
     + [API Docs](api/index.html) - the technical reference to ZooKeeper Client APIs
     + [Programmer's Guide](zookeeperProgrammers.html) - a client application developer's guide to ZooKeeper
-    + [ZooKeeper Java Example](javaExample.html) - a simple Zookeeper client appplication, written in Java
+    + [ZooKeeper Java Example](javaExample.html) - a simple Zookeeper client application, written in Java
     + [Barrier and Queue Tutorial](zookeeperTutorial.html) - sample implementations of barriers and queues
     + [ZooKeeper Recipes](recipes.html) - higher level solutions to common problems in distributed applications
 + **Administrators & Operators**
@@ -49,6 +49,7 @@ archives.
     + [Hierarchical quorums](zookeeperHierarchicalQuorums.html)
     + [Observers](zookeeperObservers.html) - non-voting ensemble members that easily improve ZooKeeper's scalability
     + [Dynamic Reconfiguration](zookeeperReconfig.html) - a guide on how to use dynamic reconfiguration in ZooKeeper
+    + [ZooKeeper Tools](zookeeperTools.html) - a guide on how to use a series of tools for ZooKeeper
 + **Contributors**
     Documents for Developers Contributing to the ZooKeeper Open Source Project
     + [ZooKeeper Internals](zookeeperInternals.html) - assorted topics on the inner workings of ZooKeeper

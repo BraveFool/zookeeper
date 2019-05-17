@@ -48,7 +48,7 @@ public class TraceFormatter {
         case OpCode.exists:
             return "exists";
         case OpCode.getData:
-            return "getDate";
+            return "getData";
         case OpCode.setData:
             return "setData";
         case OpCode.multi:
@@ -59,8 +59,12 @@ public class TraceFormatter {
             return "setACL";
         case OpCode.getChildren:
             return "getChildren";
+        case OpCode.getAllChildrenNumber:
+            return "getAllChildrenNumber";
         case OpCode.getChildren2:
             return "getChildren2";
+        case OpCode.getEphemerals:
+            return "getEphemerals";
         case OpCode.ping:
             return "ping";
         case OpCode.createSession:
@@ -71,6 +75,20 @@ public class TraceFormatter {
             return "error";
         case OpCode.reconfig:
            return "reconfig";
+        case OpCode.check:
+           return "check";
+        case OpCode.sync:
+            return "sync";
+        case OpCode.checkWatches:
+            return "checkWatches";
+        case OpCode.removeWatches:
+            return "removeWatches";
+        case OpCode.auth:
+            return "auth";
+        case OpCode.setWatches:
+            return "setWatches";
+        case OpCode.sasl:
+            return "sasl";
         default:
             return "unknown " + op;
         }
