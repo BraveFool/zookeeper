@@ -44,7 +44,7 @@ public class FourLetterWordsTest extends ClientBase {
         LoggerFactory.getLogger(FourLetterWordsTest.class);
 
     @Rule
-    public Timeout timeout = new Timeout(30000);
+    public Timeout timeout = Timeout.millis(30000);
 
     /** Test the various four letter words */
     @Test
@@ -153,7 +153,7 @@ public class FourLetterWordsTest extends ClientBase {
         Assert.assertTrue(count >= 2);
 
         line = in.readLine();
-        Assert.assertTrue(Pattern.matches("^Latency min/avg/max: \\d+/\\d+/\\d+$", line));
+        Assert.assertTrue(Pattern.matches("^Latency min/avg/max: \\d+/-?[0-9]*.?[0-9]*/\\d+$", line));
         line = in.readLine();
         Assert.assertTrue(Pattern.matches("^Received: \\d+$", line));
         line = in.readLine();

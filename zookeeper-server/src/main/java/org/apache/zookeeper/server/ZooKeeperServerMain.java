@@ -36,6 +36,7 @@ import org.apache.zookeeper.server.admin.AdminServerFactory;
 import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
 import org.apache.zookeeper.server.persistence.FileTxnSnapLog.DatadirException;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
+import org.apache.zookeeper.server.util.JvmPauseMonitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,15 +130,19 @@ public class ZooKeeperServerMain {
                 throw new IOException("Cannot boot MetricsProvider "+config.getMetricsProviderClassName(),
                     error);
             }
-
+            ServerMetrics.metricsProviderInitialized(metricsProvider);
             // Note that this thread isn't going to be doing anything else,
             // so rather than spawning another thread, we will just call
             // run() in this thread.
             // create a file logger url from the command line args
             txnLog = new FileTxnSnapLog(config.dataLogDir, config.dataDir);
-            final ZooKeeperServer zkServer = new ZooKeeperServer(txnLog,
-                    config.tickTime, config.minSessionTimeout, config.maxSessionTimeout, null);
-            zkServer.setRootMetricsContext(metricsProvider.getRootContext());
+            JvmPauseMonitor jvmPauseMonitor = null;
+            if(config.jvmPauseMonitorToRun) {
+                jvmPauseMonitor = new JvmPauseMonitor(config);
+            }
+            final ZooKeeperServer zkServer = new ZooKeeperServer(jvmPauseMonitor, txnLog,
+                    config.tickTime, config.minSessionTimeout, config.maxSessionTimeout,
+                    config.listenBacklog, null, config.initialConfig);
             txnLog.setServerStats(zkServer.serverStats());
 
             // Registers shutdown handler which will be used to know the
@@ -154,14 +159,16 @@ public class ZooKeeperServerMain {
             boolean needStartZKServer = true;
             if (config.getClientPortAddress() != null) {
                 cnxnFactory = ServerCnxnFactory.createFactory();
-                cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), false);
+                cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(),
+                    config.getClientPortListenBacklog(), false);
                 cnxnFactory.startup(zkServer);
                 // zkServer has been started. So we don't need to start it again in secureCnxnFactory.
                 needStartZKServer = false;
             }
             if (config.getSecureClientPortAddress() != null) {
                 secureCnxnFactory = ServerCnxnFactory.createFactory();
-                secureCnxnFactory.configure(config.getSecureClientPortAddress(), config.getMaxClientCnxns(), true);
+                secureCnxnFactory.configure(config.getSecureClientPortAddress(), config.getMaxClientCnxns(),
+                    config.getClientPortListenBacklog(), true);
                 secureCnxnFactory.startup(zkServer, needStartZKServer);
             }
 

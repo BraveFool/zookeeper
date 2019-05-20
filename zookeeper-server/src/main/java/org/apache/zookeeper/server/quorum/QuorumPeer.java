@@ -73,12 +73,14 @@ import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 import org.apache.zookeeper.server.quorum.flexible.QuorumMaj;
 import org.apache.zookeeper.server.quorum.flexible.QuorumVerifier;
 import org.apache.zookeeper.server.util.ConfigUtils;
+import org.apache.zookeeper.server.util.JvmPauseMonitor;
 import org.apache.zookeeper.server.util.ZxidUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.zookeeper.common.NetUtils.formatInetAddr;
 import org.apache.zookeeper.metrics.MetricsContext;
+import org.apache.zookeeper.metrics.MetricsProvider;
 import org.apache.zookeeper.metrics.impl.NullMetricsProvider;
 
 /**
@@ -132,6 +134,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
      */
     private ZKDatabase zkDb;
 
+    private JvmPauseMonitor jvmPauseMonitor;
     public static final class AddressTuple {
         public final InetSocketAddress quorumAddr;
         public final InetSocketAddress electionAddr;
@@ -387,8 +390,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         }
 
         private List<InetSocketAddress> excludedSpecialAddresses(List<InetSocketAddress> addrs) {
-            List<InetSocketAddress> included = new ArrayList<InetSocketAddress>();
-            InetAddress wcAddr = new InetSocketAddress(0).getAddress();
+            List<InetSocketAddress> included = new ArrayList<>();
 
             for (InetSocketAddress addr : addrs) {
                 if (addr == null) {
@@ -397,7 +399,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 InetAddress inetaddr = addr.getAddress();
 
                 if (inetaddr == null ||
-                    inetaddr.equals(wcAddr) || // wildCard address(0.0.0.0)
+                    inetaddr.isAnyLocalAddress() || // wildCard addresses (0.0.0.0 or [::])
                     inetaddr.isLoopbackAddress()) { // loopback address(localhost/127.0.0.1)
                     continue;
                 }
@@ -464,6 +466,10 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         return getVotingView().size();
     }
 
+    public void setJvmPauseMonitor(JvmPauseMonitor jvmPauseMonitor) {
+        this.jvmPauseMonitor = jvmPauseMonitor;
+    }
+
     /**
      * QuorumVerifier implementation; default (majority).
      */
@@ -528,6 +534,8 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     private volatile boolean running = true;
 
+    private String initialConfig;
+
     /**
      * The number of milliseconds of each tick
      */
@@ -556,6 +564,13 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
      * A value of -1 indicates unset, use default.
      */
     protected int maxSessionTimeout = -1;
+
+    /**
+     * The ZooKeeper server's socket backlog length. The number of connections
+     * that will be queued to be read before new connections are dropped. A
+     * value of one indicates the default backlog will be used.
+     */
+    protected int clientPortListenBacklog = -1;
 
     /**
      * The number of ticks that the initial synchronization phase can take
@@ -825,8 +840,6 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     AdminServer adminServer;
 
-    private MetricsContext rootMetricsContext = NullMetricsProvider.NullMetricsContext.INSTANCE;
-
     public static QuorumPeer testingQuorumPeer() throws SaslException {
         return new QuorumPeer();
     }
@@ -909,6 +922,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             System.out.println(e);
         }
         startLeaderElection();
+        startJvmPauseMonitor();
         super.start();
     }
 
@@ -973,6 +987,12 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         }
 
         this.electionAlg = createElectionAlgorithm(electionType);
+    }
+
+    private void startJvmPauseMonitor() {
+        if (this.jvmPauseMonitor != null) {
+            this.jvmPauseMonitor.serviceStart();
+        }
     }
 
     /**
@@ -1171,7 +1191,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 switch (getPeerState()) {
                 case LOOKING:
                     LOG.info("LOOKING");
-                    ServerMetrics.LOOKING_COUNT.add(1);
+                    ServerMetrics.getMetrics().LOOKING_COUNT.add(1);
 
                     if (Boolean.getBoolean("readonlymode.enabled")) {
                         LOG.info("Attempting to start ReadOnlyZooKeeperServer");
@@ -1335,6 +1355,9 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         if(udpSocket != null) {
             udpSocket.close();
         }
+        if(jvmPauseMonitor != null) {
+            jvmPauseMonitor.serviceStop();
+        }
 
         try {
             adminServer.shutdown();
@@ -1439,6 +1462,14 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         this.myid = myid;
     }
 
+    public void setInitialConfig(String initialConfig) {
+        this.initialConfig = initialConfig;
+    }
+
+    public String getInitialConfig() {
+        return initialConfig;
+    }
+
     /**
      * Get the number of milliseconds of each tick
      */
@@ -1464,7 +1495,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         }
         return -1;
     }
-
+    
     /** Whether local sessions are enabled */
     public boolean areLocalSessionsEnabled() {
         return localSessionsEnabled;
@@ -1507,6 +1538,16 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     public void setMaxSessionTimeout(int max) {
         LOG.info("maxSessionTimeout set to " + max);
         this.maxSessionTimeout = max;
+    }
+
+    /** The server socket's listen backlog length */
+    public int getClientPortListenBacklog() {
+        return this.clientPortListenBacklog;
+    }
+
+    /** Sets the server socket's listen backlog length. */
+    public void setClientPortListenBacklog(int backlog) {
+        this.clientPortListenBacklog = backlog;
     }
 
     /**
@@ -1763,15 +1804,17 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         this.secureCnxnFactory = secureCnxnFactory;
     }
 
-    public void setRootMetricsContext(MetricsContext rootMetricsContext) {
-        this.rootMetricsContext = rootMetricsContext;
-    }
-
     public void setSslQuorum(boolean sslQuorum) {
+        if (sslQuorum) {
+            LOG.info("Using TLS encrypted quorum communication");
+        } else {
+            LOG.info("Using insecure (non-TLS) quorum communication");
+        }
         this.sslQuorum = sslQuorum;
     }
 
     public void setUsePortUnification(boolean shouldUsePortUnification) {
+        LOG.info("Port unification {}", shouldUsePortUnification ? "enabled" : "disabled");
         this.shouldUsePortUnification = shouldUsePortUnification;
     }
 
@@ -2205,7 +2248,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     void setQuorumSaslEnabled(boolean enableAuth) {
         quorumSaslEnableAuth = enableAuth;
         if (!quorumSaslEnableAuth) {
-            LOG.info("QuorumPeer communication is not secured!");
+            LOG.info("QuorumPeer communication is not secured! (SASL auth disabled)");
         } else {
             LOG.info("{} set to {}",
                     QuorumAuth.QUORUM_SASL_AUTH_ENABLED, enableAuth);

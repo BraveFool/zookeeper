@@ -18,25 +18,29 @@
 
 package org.apache.zookeeper.server.metric;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.zookeeper.metrics.Summary;
 
 /**
  * Generic long counter that keep track of min/max/avg. The counter is
  * thread-safe
  */
-public class AvgMinMaxCounter implements Metric {
-    private String name;
-    private AtomicLong total = new AtomicLong();
-    private AtomicLong min = new AtomicLong(Long.MAX_VALUE);
-    private AtomicLong max = new AtomicLong(Long.MIN_VALUE);
-    private AtomicLong count = new AtomicLong();
+public class AvgMinMaxCounter extends Metric
+            implements Summary {
+    private final String name;
+    private final AtomicLong total = new AtomicLong();
+    private final AtomicLong min = new AtomicLong(Long.MAX_VALUE);
+    private final AtomicLong max = new AtomicLong(Long.MIN_VALUE);
+    private final AtomicLong count = new AtomicLong();
 
     public AvgMinMaxCounter(String name) {
         this.name = name;
     }
-
+    
     public void addDataPoint(long value) {
         total.addAndGet(value);
         count.incrementAndGet();
@@ -58,13 +62,15 @@ public class AvgMinMaxCounter implements Metric {
             ;
     }
 
-    public long getAvg() {
+    public double getAvg() {
         // There is possible race-condition but we don't need the stats to be
         // extremely accurate.
         long currentCount = count.get();
         long currentTotal = total.get();
         if (currentCount > 0) {
-            return currentTotal / currentCount;
+            double avgLatency = currentTotal / (double)currentCount;
+            BigDecimal bg = new BigDecimal(avgLatency);
+            return bg.setScale(4, RoundingMode.HALF_UP).doubleValue();
         }
         return 0;
     }
@@ -102,12 +108,14 @@ public class AvgMinMaxCounter implements Metric {
         addDataPoint(value);
     }
 
-    public Map<String, Long> values() {
-        Map<String, Long> m = new LinkedHashMap<String, Long>();
+    public Map<String, Object> values() {
+        Map<String, Object> m = new LinkedHashMap<String, Object>();
         m.put("avg_" + name, this.getAvg());
         m.put("min_" + name, this.getMin());
         m.put("max_" + name, this.getMax());
         m.put("cnt_" + name, this.getCount());
+        m.put("sum_" + name, this.getTotal());
         return m;
     }
+
 }

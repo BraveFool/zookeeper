@@ -16,14 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.zookeeper.jmx;
+package org.apache.zookeeper.server;
 
 /**
- * A bunch of constants.
- * TODO: will get rid of it eventually.
+ * Indicates that the number of client connections has exceeded some limit.
+ * @see org.apache.zookeeper.server.ClientCnxnLimit#checkLimit()
+ * @see org.apache.zookeeper.server.ClientCnxnLimit#checkLimit(int)
  */
-public class CommonNames {
-    public static final String DOMAIN="org.apache.ZooKeeperService";
-    public static final String DATA_TREE_KEY="DataTree";
-    public static final String STANDALONE_SERVER_KEY="StandaloneServer";
+public class ClientCnxnLimitException extends Exception {
+    public ClientCnxnLimitException() {
+        super("Connection throttle rejected connection");
+    }
 }

@@ -24,6 +24,7 @@ import javax.management.JMException;
 import javax.security.sasl.SaslException;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.server.util.JvmPauseMonitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.jmx.ManagedUtil;
@@ -34,6 +35,7 @@ import org.apache.zookeeper.server.ExitCode;
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.DatadirCleanupManager;
+import org.apache.zookeeper.server.ServerMetrics;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.admin.AdminServer.AdminServerException;
 import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
@@ -154,7 +156,7 @@ public class QuorumPeerMain {
                       error);
       }
       try {
-
+          ServerMetrics.metricsProviderInitialized(metricsProvider);
           ServerCnxnFactory cnxnFactory = null;
           ServerCnxnFactory secureCnxnFactory = null;
 
@@ -162,18 +164,17 @@ public class QuorumPeerMain {
               cnxnFactory = ServerCnxnFactory.createFactory();
               cnxnFactory.configure(config.getClientPortAddress(),
                       config.getMaxClientCnxns(),
-                      false);
+                      config.getClientPortListenBacklog(), false);
           }
 
           if (config.getSecureClientPortAddress() != null) {
               secureCnxnFactory = ServerCnxnFactory.createFactory();
               secureCnxnFactory.configure(config.getSecureClientPortAddress(),
                       config.getMaxClientCnxns(),
-                      true);
+                      config.getClientPortListenBacklog(), true);
           }
 
           quorumPeer = getQuorumPeer();
-          quorumPeer.setRootMetricsContext(metricsProvider.getRootContext());
           quorumPeer.setTxnFactory(new FileTxnSnapLog(
                       config.getDataLogDir(),
                       config.getDataDir()));
@@ -190,6 +191,7 @@ public class QuorumPeerMain {
           quorumPeer.setSyncLimit(config.getSyncLimit());
           quorumPeer.setObserverMasterPort(config.getObserverMasterPort());
           quorumPeer.setConfigFileName(config.getConfigFilename());
+          quorumPeer.setClientPortListenBacklog(config.getClientPortListenBacklog());
           quorumPeer.setZKDatabase(new ZKDatabase(quorumPeer.getTxnFactory()));
           quorumPeer.setQuorumVerifier(config.getQuorumVerifier(), false);
           if (config.getLastSeenQuorumVerifier()!=null) {
@@ -218,7 +220,11 @@ public class QuorumPeerMain {
           }
           quorumPeer.setQuorumCnxnThreadsSize(config.quorumCnxnThreadsSize);
           quorumPeer.initialize();
-          
+
+          if(config.jvmPauseMonitorToRun) {
+              quorumPeer.setJvmPauseMonitor(new JvmPauseMonitor(config));
+          }
+
           quorumPeer.start();
           quorumPeer.join();
       } catch (InterruptedException e) {
