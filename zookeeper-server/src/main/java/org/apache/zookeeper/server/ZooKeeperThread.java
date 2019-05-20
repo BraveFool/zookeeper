@@ -26,8 +26,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ZooKeeperThread extends Thread {
 
-    private static final Logger LOG = LoggerFactory
-            .getLogger(ZooKeeperThread.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperThread.class);
 
     private UncaughtExceptionHandler uncaughtExceptionalHandler = new UncaughtExceptionHandler() {
 

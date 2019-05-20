@@ -46,13 +46,12 @@ public final class StaticHostProvider implements HostProvider {
         InetAddress[] getAllByName(String name) throws UnknownHostException;
     }
 
-    private static final Logger LOG = LoggerFactory
-            .getLogger(StaticHostProvider.class);
+    private static final Logger LOG = LoggerFactory.getLogger(StaticHostProvider.class);
 
-    private List<InetSocketAddress> serverAddresses = new ArrayList<InetSocketAddress>(
-            5);
+    private List<InetSocketAddress> serverAddresses = new ArrayList<InetSocketAddress>(5);
 
     private Random sourceOfRandomness;
+
     private int lastIndex = -1;
 
     private int currentIndex = -1;
@@ -62,11 +61,9 @@ public final class StaticHostProvider implements HostProvider {
      */
     private boolean reconfigMode = false;
 
-    private final List<InetSocketAddress> oldServers = new ArrayList<InetSocketAddress>(
-            5);
+    private final List<InetSocketAddress> oldServers = new ArrayList<InetSocketAddress>(5);
 
-    private final List<InetSocketAddress> newServers = new ArrayList<InetSocketAddress>(
-            5);
+    private final List<InetSocketAddress> newServers = new ArrayList<InetSocketAddress>(5);
 
     private int currentIndexOld = -1;
     private int currentIndexNew = -1;
@@ -84,8 +81,7 @@ public final class StaticHostProvider implements HostProvider {
      *             if serverAddresses is empty or resolves to an empty list
      */
     public StaticHostProvider(Collection<InetSocketAddress> serverAddresses) {
-        init(serverAddresses,
-                System.currentTimeMillis() ^ this.hashCode(),
+        init(serverAddresses, System.currentTimeMillis() ^ this.hashCode(),
                 new Resolver() {
             @Override
             public InetAddress[] getAllByName(String name) throws UnknownHostException {
@@ -133,8 +129,7 @@ public final class StaticHostProvider implements HostProvider {
         this.sourceOfRandomness = new Random(randomnessSeed);
         this.resolver = resolver;
         if (serverAddresses.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "A HostProvider may not be empty!");
+            throw new IllegalArgumentException("A HostProvider may not be empty!");
         }
         this.serverAddresses = shuffle(serverAddresses);
         currentIndex = -1;

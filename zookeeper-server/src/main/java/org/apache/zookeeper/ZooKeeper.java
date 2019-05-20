@@ -258,12 +258,9 @@ public class ZooKeeper implements AutoCloseable {
      * API.
      */
     static class ZKWatchManager implements ClientWatchManager {
-        private final Map<String, Set<Watcher>> dataWatches =
-            new HashMap<String, Set<Watcher>>();
-        private final Map<String, Set<Watcher>> existWatches =
-            new HashMap<String, Set<Watcher>>();
-        private final Map<String, Set<Watcher>> childWatches =
-            new HashMap<String, Set<Watcher>>();
+        private final Map<String, Set<Watcher>> dataWatches = new HashMap<String, Set<Watcher>>();
+        private final Map<String, Set<Watcher>> existWatches = new HashMap<String, Set<Watcher>>();
+        private final Map<String, Set<Watcher>> childWatches = new HashMap<String, Set<Watcher>>();
         private boolean disableAutoWatchReset;
 
         ZKWatchManager(boolean disableAutoWatchReset) {
@@ -2954,7 +2951,7 @@ public class ZooKeeper implements AutoCloseable {
      * 
      * @param acl
      *            ACL list
-     * @throws InvalidACLException
+     * @throws KeeperException.InvalidACLException
      *             if ACL list is not valid
      */
     private void validateACL(List<ACL> acl) throws KeeperException.InvalidACLException {
